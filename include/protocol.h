@@ -13,9 +13,9 @@
 
 typedef enum
 {
-	Cmd_WriteSector = 0x01,
-	Cmd_FlashNewApp
-
+	Cmd_FlashNewApp = 0x01,
+	Cmd_WriteSector 
+		
 }ReqCmd_t;
 
 typedef struct
@@ -31,17 +31,15 @@ typedef struct
 {
 	u32 Address;
 	u32 FrameDataSize;
-	u8 Data[8];
-	//u16 Data[1024];
+	u8  Data[8];
+
 }WriteSector_t;
 
 
 typedef struct
 {
-
 	u16 Request_No;
-	u8 CMD_No;
-	//u32 FrameSize;
+	u16 CMD_No;//edited to be u16 > to avoid padding 
 
 }ReqHeader_t;
 
@@ -54,10 +52,8 @@ typedef struct
 	{
 		FlashNewApp_t	FlashNewApp;
 		WriteSector_t	WriteSector;
-
-
+		
 	}Data_t;
-
 
 }ReqDateFrame_t;
 
@@ -65,7 +61,6 @@ typedef struct
 
 typedef struct
 {
-
 	u16 Request_No;
 	u8 CMD_No;
 	u8 Result;
