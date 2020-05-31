@@ -93,45 +93,45 @@ void FLASH_ErasePage(u32 pageAddress)
 }
 
 
-ERROR_STATUS FLASH_WriteWord(void* address , u32 data)
-{
-	/* wait for busy flag to be cleared */
-	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
-
-    /* set PG  bit to write half word  */
-	FLASH->CR |= CR_PG_Set ;
-
-    /* write LSB FIRST */
-	*( (u16*) address ) =  (u16) data ;
-
-	/* wait for busy flag to be cleared */
-	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
-
-	/* EOP is set by hw to reset EOP we should write one */
-	FLASH->SR |=  FLASH_FLAG_EOP ;
-
-    /* write MSB SECOND */
-	*( ( ((u16*)address) + 1) ) =  (u16) (data>>16)  ;
-
-	/* wait for busy flag to be cleared */
-	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
-
-	/* EOP is set by hw to reset EOP we should write one */
-	FLASH->SR |=  FLASH_FLAG_EOP ;
-
-	/* RESET PG BIT  */
-	FLASH->CR &= CR_PG_Reset ;
-
-	/* check if data is written correctly or not */
-    if( *( (u32*) address )  ==  data)
-    {
-       return OK;
-    }
-    else
-    {
-       return NOT_OK;
-    }
-}
+//ERROR_STATUS FLASH_WriteWord(void* address , u32 data)
+//{
+//	/* wait for busy flag to be cleared */
+//	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+//
+//    /* set PG  bit to write half word  */
+//	FLASH->CR |= CR_PG_Set ;
+//
+//    /* write LSB FIRST */
+//	*( (u16*) address ) =  (u16) data ;
+//
+//	/* wait for busy flag to be cleared */
+//	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+//
+//	/* EOP is set by hw to reset EOP we should write one */
+//	FLASH->SR |=  FLASH_FLAG_EOP ;
+//
+//    /* write MSB SECOND */
+//	*( ( ((u16*)address) + 1) ) =  (u16) (data>>16)  ;
+//
+//	/* wait for busy flag to be cleared */
+//	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+//
+//	/* EOP is set by hw to reset EOP we should write one */
+//	FLASH->SR |=  FLASH_FLAG_EOP ;
+//
+//	/* RESET PG BIT  */
+//	FLASH->CR &= CR_PG_Reset ;
+//
+//	/* check if data is written correctly or not */
+//    if( *( (u32*) address )  ==  data)
+//    {
+//       return OK;
+//    }
+//    else
+//    {
+//       return NOT_OK;
+//    }
+//}
 
 void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes)
 {
