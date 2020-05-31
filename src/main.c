@@ -69,7 +69,6 @@ void Comm_Cb (void)
 
          //for(x=0; x < 1000000 ;x++);
          UART_Send(TxBuffer,sizeof(RespFrame_t));
-
       }
       else
       {
