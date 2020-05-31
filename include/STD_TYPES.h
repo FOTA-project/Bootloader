@@ -28,8 +28,8 @@ typedef  u8 ERROR_STATUS;
 #define status_Ok   1U
 #define status_NOk  0U
 
-#define OK  1
-#define NOT_OK 0
+#define OK     0
+#define NOT_OK 1
 
 #define STD_ERROR_NOK				1
 #define STD_ERROR_Ok				2

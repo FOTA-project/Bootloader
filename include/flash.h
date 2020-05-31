@@ -6,6 +6,69 @@
  */
 
 
+
+#ifndef FLASH_H
+#define FLASH_H
+
+
+
+
+
+extern void FLASH_Unlock(void);
+
+extern void FLASH_Lock(void);
+
+extern void FLASH_ErasePage(u32 pageAddress);
+
+
+ERROR_STATUS FLASH_WriteWord(void* address , u32 data);
+
+extern void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes);
+
+
+
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 #ifndef FLASH_H
 #define FLASH_H
 
@@ -23,3 +86,4 @@ extern  void Flash_unlock (void);
 
 
 #endif
+*/

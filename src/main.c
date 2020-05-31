@@ -13,7 +13,7 @@
 #include "NVIC_interface.h"
 #include "GPIO_interface.h"
 #include "protocol.h"
-#include "Diag/trace.h"
+//#include "Diag/trace.h"
 //#include "cmsis_gcc.h"
 
 
@@ -38,7 +38,7 @@ typedef void (*AppEntryPoint_t) (void);
 
 
 __attribute__((section(".marker_section"),used))
-u32 Marker =  NO_APP_MARKER;
+volatile u32 Marker ; //APP_1_MARKER
 
 static u32 StartAddress;
 static u32 AppSize;
@@ -46,7 +46,7 @@ static u32 EntryPoint;
 static u8 KeyValue;
 
 
-u8 CurrentPage;
+u32 CurrentPage;
 
 static u8 RxBuffer [sizeof (ReqDateFrame_t)] ;
 ReqDateFrame_t * ReqFrame = (ReqDateFrame_t *) RxBuffer;
@@ -54,21 +54,21 @@ ReqDateFrame_t * ReqFrame = (ReqDateFrame_t *) RxBuffer;
 static u8 TxBuffer [sizeof (RespFrame_t)] ;
 RespFrame_t * RespFrame = (RespFrame_t *) TxBuffer;
 
-static u8 TxBuffer2 [1] = "H";
+//static u8 TxBuffer2 [1] = "H";
 
-
-void txcb (void)
-{
-	trace_printf("TX cb hello\n");
-}
 
 
 void Comm_Cb (void)
 {
 
-trace_printf("RX cb hello\n");
+//trace_printf("RX cb hello\n");
 
 	static u32 counter;
+	u8 returnStatus = OK;
+    //u8 j;
+    u32 x;
+    //u32 MARKER_1 = APP_1_MARKER;
+
 
 	RespFrame -> CMD_No = ReqFrame -> ReqHeader.CMD_No;
 	RespFrame -> Request_No = ReqFrame -> ReqHeader.Request_No;
@@ -84,6 +84,8 @@ trace_printf("RX cb hello\n");
 			KeyValue = KEY_CORRECT;
 
 			RespFrame -> Result = OK_RESPONSE;
+
+			for(x=0; x < 1000000 ;x++);
 			UART_Send(TxBuffer,sizeof(RespFrame_t));
 
 		}
@@ -91,6 +93,8 @@ trace_printf("RX cb hello\n");
 		{
 			KeyValue = KEY_INCORRECT;
 			RespFrame ->Result = NOK_RESPONSE;
+
+			for(x=0; x < 250000 ;x++);
 			UART_Send(TxBuffer,sizeof(RespFrame_t));
 		}
 	}
@@ -100,34 +104,66 @@ trace_printf("RX cb hello\n");
 		{
 			counter +=  ReqFrame -> Data_t.WriteSector.FrameDataSize;
 
-			Flash_unlock();
+			FLASH_Unlock();
 
 			if (ReqFrame -> Data_t.WriteSector.Address/PAGE_SIZE != CurrentPage)
 			{
-				Flash_EarsePage(ReqFrame -> Data_t.WriteSector.Address);
+				FLASH_ErasePage(ReqFrame -> Data_t.WriteSector.Address);
+
 				CurrentPage = ReqFrame -> Data_t.WriteSector.Address/PAGE_SIZE;
 			}
 
-			Flash_ProgramWrite ((u32*)&ReqFrame -> Data_t.WriteSector.Data,(u32*)&ReqFrame -> Data_t.WriteSector.Address, ReqFrame -> Data_t.WriteSector.FrameDataSize);
+			//Flash_ProgramWrite ((u32*)&ReqFrame -> Data_t.WriteSector.Data,(u32*)&ReqFrame -> Data_t.WriteSector.Address, ReqFrame -> Data_t.WriteSector.FrameDataSize);
+			// TODO: Verify by BL
 
-			/* TODO: Verify by BL */
+			//returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address , (u32) *( &(ReqFrame -> Data_t.WriteSector.Data)) );
+			//returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address +4 , (u32) *(&(ReqFrame -> Data_t.WriteSector.Data) + 4 ) );
 
-			RespFrame ->Result = OK_RESPONSE;
+		    FLASH_WriteProgramm((void*)ReqFrame -> Data_t.WriteSector.Address , (void*)ReqFrame -> Data_t.WriteSector.Data , ReqFrame -> Data_t.WriteSector.FrameDataSize);
 
+		    FLASH_Lock();
+/*
+		    for(j=0; j<8 ;j++)
+		    {
+		    	trace_printf("ROM address  %d  =  %x\n",j , *( (u8*)((ReqFrame -> Data_t.WriteSector.Address) + j)) );
+		    }
+*/
+
+            if(returnStatus  ==  OK )
+            {
+			   RespFrame ->Result = OK_RESPONSE;
+            }
+
+		    for(x=0; x < 250000 ;x++)
+		    {
+
+		    }
 			UART_Send(TxBuffer,sizeof(RespFrame_t));
 
-			if ( counter == AppSize)
+			if (counter >= AppSize)
 			{
 				RespFrame -> Result = OK_RESPONSE;
+
+				for(x=0; x < 250000 ;x++);
 				UART_Send(TxBuffer,sizeof(RespFrame_t));
-				Flash_EarsePage((u32  )&Marker);
-				Flash_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
+
+
+				FLASH_Unlock();
+				FLASH_ErasePage((u32)&Marker);
+			    FLASH_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
+				//FLASH_WriteProgramm((void*)&Marker , (void*)&MARKER_1  ,4);
+				//trace_printf("Marker = %d\n" , Marker );
+				FLASH_Lock();
+
 				counter = 0;
 			}
 		}
 		else
 		{
+
 			RespFrame ->Result = NOK_RESPONSE;
+
+			for(x=0; x < 250000 ;x++);
 			UART_Send(TxBuffer,sizeof(RespFrame_t));
 		}
 
@@ -139,11 +175,12 @@ trace_printf("RX cb hello\n");
 
 void main (void)
 {
-
 	AppEntryPoint_t MSP = *(void **) START_ADDRESS;
 
-	const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t) EntryPoint  ;
-	//const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
+	const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t)  ( (*(u32*)0x08002004) + 0x2000 ) ;//EntryPoint
+	//////const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
+
+
 
 	switch (Marker)
 	{
@@ -156,27 +193,22 @@ void main (void)
    break;
 
 	case APP_2_MARKER:
-	//	__set_MSP(*(__IO uint32_t*)StartAddress);  // TODO: Init stack pointer of APP2
+	     //	__set_MSP(*(__IO uint32_t*)StartAddress);  // TODO: Init stack pointer of APP2
 		//App2EntryPoint();
    break;
 
 	default:
-      RCC_EnablePrephiralClock(AHBENR_BUS, FLASH_ENABLE);
-      RCC_EnablePrephiralClock(APB2ENR_BUS, PORTA_Enable);
-      RCC_EnablePrephiralClock(APB2ENR_BUS, UART_Enable);
+
+		RCC_EnablePrephiralClock(AHBENR_BUS, FLASH_ENABLE);
+		RCC_EnablePrephiralClock(APB2ENR_BUS, PORTA_Enable);
+		RCC_EnablePrephiralClock(APB2ENR_BUS, UART_Enable);
 
 		UART_voidInit(USART1);
 		UART_SetRxCbf(Comm_Cb);
-		UART_SetTxCbf(txcb);
-		UART_Send(TxBuffer2, 1 );
+		//UART_SetTxCbf(txcb);
 
 		UART_Recieve(RxBuffer,sizeof(ReqDateFrame_t));
 
-      trace_printf("sizeof(FlashNewApp_t) = %d\n", sizeof(FlashNewApp_t));
-      trace_printf("sizeof(WriteSector_t) = %d\n", sizeof(WriteSector_t));
-      trace_printf("sizeof(ReqHeader_t) = %d\n", sizeof(ReqHeader_t));
-      trace_printf("sizeof(ReqDateFrame_t) = %d\n", sizeof(ReqDateFrame_t));
-      trace_printf("sizeof(RespFrame_t) = %d\n", sizeof(RespFrame_t));
 
 
 		while(1)

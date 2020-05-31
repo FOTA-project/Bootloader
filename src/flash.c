@@ -1,262 +1,163 @@
-/*
- * flash.c
- *
- *  Created on: May 4, 2020
- *      Author: Esraa Awad
- */
+
+/***************************************** INCLUDES *********************************************/
+
 #include "STD_TYPES.h"
-#include "flash.h"
-#include "NVIC_interface.h"
+#include "Flash.h"
 
 
-#define FLASH_BASE_ADDRESS		0x40022000
-#define FPEC 					((volatile Flash_t *)FLASH_BASE_ADDRESS)
+/***************************************** MASKS ************************************************/
+
+/* Flash Control Register bits */
+#define CR_PG_Set                ((u32)0x00000001)
+#define CR_PG_Reset              ((u32)0x00001FFE)
+
+#define CR_PER_Set               ((u32)0x00000002)
+#define CR_PER_Reset             ((u32)0x00001FFD)
+
+#define CR_MER_Set               ((u32)0x00000004)
+#define CR_MER_Reset             ((u32)0x00001FFB)
+
+#define CR_START_Set             ((u32)0x00000040)
+#define CR_LOCK_Set              ((u32)0x00000080)
+
+/* FLASH Keys */
+#define FLASH_KEY1               ((u32)0x45670123)
+#define FLASH_KEY2               ((u32)0xCDEF89AB)
+
+ /* FLASH Busy flag */
+#define FLASH_FLAG_BSY           ((u32)0x00000001)
+/* FLASH End of Operation flag */
+#define FLASH_FLAG_EOP           ((u32)0x00000020)
 
 
-#define FLASH_KEY1  			(u32)0x45670123
-#define FLASH_KEY2  			(u32)0xCDEF89AB
+/******************************************** REGISTERS ********************************************/
 
-#define CR_LOCK					(u32)0x00000080
-#define CR_PER					(u32)0x00000002
-#define CR_PER_CLR_MASK			(u32)0xFFFFFFFD
-#define CR_STRT					(u32)0x00000040
-#define CR_MER					(u32)0x00000004
-#define CR_MER_CLR_MASK			(u32)0xFFFFFFFB
-#define CR_PG					(u32)0x00000001
-#define CR_PG_CLR_MASK			(u32)0x0000000E
-
-#define SR_BSY					(u32)0x00000001
-#define SR_EOP					(u32)0000000020
-
-#define FLASH_ERASE				(u32)0xFFFFFFFF
-#define FLASH_BUSY				(FPEC -> SR) & SR_BSY
-#define FLASH_LOCK				(FPEC -> CR) & CR_LOCK
-#define HALF_WORD				(u8)16
-
-
+#define FLASH_BASE_ADDRESS       ((u32)0x40022000)
 
 typedef struct
 {
+    u32 ACR;
+    u32 KEYR;
+    u32 OPTKEYR;
+    u32 SR;
+    u32 CR;
+    u32 AR;
+    u32 OBR;
+    u32 WRPR;
 
-	u32 ACR;
-	u32 KEYR;
-	u32 OPTKEYR;
-	u32 SR;
-	u32 CR;
-	u32 AR;
-	u32 reserved[1];
-	u32 OBR;
-	u32 WRPR;
-
-}Flash_t;
+}FLASH_REGISTERS;
 
 
+volatile FLASH_REGISTERS*  const FLASH  = (FLASH_REGISTERS*) FLASH_BASE_ADDRESS  ;
 
+/************************************* FUNCTIONS DEFINITIONS ****************************************/
 
-void Flash_Lock (void)
+void FLASH_Unlock(void)
 {
-	FPEC  -> CR = CR_LOCK;
-
-
-
-}
-void Flash_unlock (void)
-{
-
-	FPEC -> KEYR = FLASH_KEY1;
-	FPEC -> KEYR = FLASH_KEY2;
-
-
+  /* Authorize the FPEC of Bank1 Access */
+  if( (FLASH->CR & CR_LOCK_Set) == CR_LOCK_Set)
+  {
+	  FLASH->KEYR = FLASH_KEY1;
+	  FLASH->KEYR = FLASH_KEY2;
+  }
 }
 
-
-void Flash_Init (void)
+void FLASH_Lock(void)
 {
-
-	/* Disable all interrupts */
-
-
-
-	/* Unlock the flash */
-	Flash_unlock();
-
-
+  /* Set the Lock Bit to lock the FPEC and the CR of  Bank1 */
+  FLASH->CR |= CR_LOCK_Set;
 }
 
-
-void Flash_MassErase (void)
+void FLASH_ErasePage(u32 pageAddress)
 {
-	if (FLASH_LOCK )
-	{
-		Flash_unlock();
-	}
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
+	/* SET PER BIT */
+	FLASH->CR |= CR_PER_Set ;
 
-	while (FLASH_BUSY);
+    /* WRITE ADDRESS withen the page */
+	FLASH->AR = pageAddress ;
 
-	FPEC -> CR |= CR_MER;
+	/* SET START BIT */
+	FLASH->CR |= CR_START_Set ;
 
-	FPEC -> CR |= CR_STRT;
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
-	while (FLASH_BUSY);
+	/* EOP is set by hw to reset EOP we should write one */
+	FLASH->SR |=  FLASH_FLAG_EOP ;
 
-	FPEC -> CR &= CR_MER_CLR_MASK;
-	FPEC -> SR |= SR_EOP;
-
-}
-
-ERROR_STATUS Flash_EarsePage (u32  PageAddress)
-{
-	if (FLASH_LOCK )
-	{
-		Flash_unlock();
-	}
-
-
-	ERROR_STATUS Local_Error = STD_ERROR_Ok;
-
-	while (FLASH_BUSY);
-
-	FPEC -> CR |= CR_PER;
-	FPEC -> AR |= PageAddress;
-	FPEC -> CR |= CR_STRT;
-
-	while (FLASH_BUSY);
-
-	if ( PageAddress != FLASH_ERASE)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-	FPEC -> CR &= CR_PER_CLR_MASK;
-	FPEC -> SR |= SR_EOP;
-
-	return (Local_Error);
-
-}
-
-ERROR_STATUS Flash_WriteWord (u32 * FlashAddress , u32 Data )
-{
-	/* Disable all interrupts */
-	NVIC_DisableAllInterrupt();
-
-	ERROR_STATUS Local_Error = STD_ERROR_Ok;
-
-	if (FLASH_LOCK )
-	{
-		Flash_unlock();
-	}
-
-	if (* FlashAddress != FLASH_ERASE)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-	FPEC -> CR = CR_PG;
-	* ((u16*)FlashAddress) = (u16) Data;
-
-	while (FLASH_BUSY);
-	FPEC -> SR |= SR_EOP;
-
-	//(u16*)FlashAddress[1] = (u16)(Data >> HALF_WORD);
-	*((u16*)FlashAddress +1) = (u16)(Data >> HALF_WORD);
-
-	FPEC -> SR |= SR_EOP;
-	FPEC -> CR &= CR_PG_CLR_MASK;
-
-	if (*FlashAddress != Data)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-	return (Local_Error);
-
-
-
-}
-
-ERROR_STATUS Flash_WriteHalfWord (u32 * FlashAddress , u16 Data)
-{
-	/* Disable all interrupts */
-	NVIC_DisableAllInterrupt();
-
-
-
-	ERROR_STATUS Local_Error = STD_ERROR_Ok;
-
-	if (FLASH_LOCK )
-	{
-		Flash_unlock ();
-	}
-
-	if (* FlashAddress != FLASH_ERASE)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-	FPEC -> CR = CR_PG;
-	* ((u16*)FlashAddress) =  Data;
-
-	while (FLASH_BUSY);
-	FPEC -> SR |= SR_EOP;
-
-	FPEC -> CR &= CR_PG_CLR_MASK;
-
-	if (* ((u16*)FlashAddress) != Data)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-	return (Local_Error);
-}
-extern ERROR_STATUS Flash_ProgramWrite (u32 * SourceStartAddress , u32 * DestinationStartAddress , u16 BytesNumber)
-{
-
-	/* Disable all interrupts */
-	NVIC_DisableAllInterrupt();
-
-	ERROR_STATUS Local_Error = STD_ERROR_Ok;
-
-	u16 index;
-
-	if (FLASH_LOCK )
-	{
-		Flash_unlock();
-	}
-
-	if (*DestinationStartAddress != FLASH_ERASE)
-	{
-		Local_Error = STD_ERROR_NOK;
-	}
-
-
-	FPEC -> CR = CR_PG;
-
-	for (index = 0 ; index <BytesNumber/2 ; index++ )
-	{
-		//(u16*)DestinationStartAddress[index] =  (u16*)SourceStartAddress[index];
-		*((u16*)DestinationStartAddress+index) =  *((u16*)SourceStartAddress+index);
-
-		while (FLASH_BUSY);
-		FPEC -> SR |= SR_EOP;
-
-	}
-
-
-	FPEC -> CR &= CR_PG_CLR_MASK;
-
-
-	return (Local_Error);
-
+	/* RESET PER BIT */
+	FLASH->CR &= CR_PER_Reset;
 }
 
 
+ERROR_STATUS FLASH_WriteWord(void* address , u32 data)
+{
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
+    /* set PG  bit to write half word  */
+	FLASH->CR |= CR_PG_Set ;
 
+    /* write LSB FIRST */
+	*( (u16*) address ) =  (u16) data ;
 
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
+	/* EOP is set by hw to reset EOP we should write one */
+	FLASH->SR |=  FLASH_FLAG_EOP ;
 
+    /* write MSB SECOND */
+	*( ( ((u16*)address) + 1) ) =  (u16) (data>>16)  ;
 
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
+	/* EOP is set by hw to reset EOP we should write one */
+	FLASH->SR |=  FLASH_FLAG_EOP ;
 
+	/* RESET PG BIT  */
+	FLASH->CR &= CR_PG_Reset ;
+
+	/* check if data is written correctly or not */
+    if( *( (u32*) address )  ==  data)
+    {
+       return OK;
+    }
+    else
+    {
+       return NOT_OK;
+    }
+}
+
+void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes)
+{
+	u16 idx;
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+
+    /* set PG  bit to write half word */
+	FLASH->CR |= CR_PG_Set ;
+
+	for(idx=0; idx < numberOfBytes/2 ; idx++)
+	{
+	    /* write byte */
+		*( ( ((u16*)startAddress) + idx ) ) =  (u16)  ( *( ( ((u16*)dataAddress) + idx ) ) );
+
+		/* wait for busy flag to be cleared */
+		while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+
+		/* EOP is set by hw to reset EOP we should write one */
+		FLASH->SR |=  FLASH_FLAG_EOP ;
+	}
+
+	/* wait for busy flag to be cleared */
+	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
+
+	/* RESET PG BIT  */
+	FLASH->CR &= CR_PG_Reset ;
+}
 

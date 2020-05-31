@@ -259,7 +259,7 @@ void USART1_IRQHandler (void)
 
 				if (appRxNotify)
 				{
-               appRxNotify();
+                   appRxNotify();
 				}
 			}
 		}
@@ -289,9 +289,9 @@ void USART1_IRQHandler (void)
 			UART_TxBuffer.State = idle;
 
 			if (appTxNotify)
-         {
-            appTxNotify();
-         }
+            {
+              appTxNotify();
+            }
 		}
 	}
 }
