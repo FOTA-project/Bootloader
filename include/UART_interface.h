@@ -50,6 +50,12 @@
 typedef void (*UART_Txcbf_t)(void);
 typedef void (*UART_Rxcbf_t)(void);
 
+typedef enum
+{
+   idle,
+   busy
+} UART_BufferState_t;
+
 /*******************************  FUNCTION PROTOTYPES ************/
 /*
 *
@@ -82,6 +88,8 @@ extern ERROR_STATUS UART_Send(u8 * Buffer , u16 DataLength);
 */
 extern ERROR_STATUS UART_Recieve(u8* Buffer , u16 DataLength);
 
+
+extern UART_BufferState_t UART_IsTxBufferEmpty(void);
 
 
 /*

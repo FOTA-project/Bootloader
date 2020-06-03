@@ -35,11 +35,6 @@
 #define UART_CR3_RTSE	  0x00000100
 
 /******************************** UART DATA BUFFER  ******************************/
-typedef enum
-{
-   idle, busy
-} UART_BufferState_t;
-
 typedef struct
 {
    u8 *DataBuffer;
@@ -183,6 +178,11 @@ ERROR_STATUS UART_Recieve(u8* Buffer, u16 BufferLength)
    }
 
    return (Local_error);
+}
+
+extern UART_BufferState_t UART_IsTxBufferEmpty(void)
+{
+   return UART_TxBuffer.State;
 }
 
 /*

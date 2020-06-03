@@ -186,6 +186,15 @@ void main (void)
          {
             if (Marker != NO_APP_MARKER)
             {
+               /* fixes a bug where the app marker would be written
+                * and immediately the main() code will reset the microcontroller
+                * which cancel the transmission of the last ACK.
+                * in other words the microcontroller was being reset while the ACK was being sent */
+               while (UART_IsTxBufferEmpty() == busy)
+               {
+
+               }
+
                /* System Reset */
                NVIC_ResetSystem();
             }
