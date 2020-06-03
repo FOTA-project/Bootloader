@@ -23,7 +23,7 @@ extern void FLASH_ErasePage(u32 pageAddress);
 
 ERROR_STATUS FLASH_WriteWord(void* address , u32 data);
 
-extern void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes);
+ERROR_STATUS FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes);
 
 
 

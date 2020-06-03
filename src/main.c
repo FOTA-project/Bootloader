@@ -96,36 +96,44 @@ void Comm_Cb(void)
          //returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address , (u32) *( &(ReqFrame -> Data_t.WriteSector.Data)) );
          //returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address +4 , (u32) *(&(ReqFrame -> Data_t.WriteSector.Data) + 4 ) );
 
-         FLASH_WriteProgramm((void*) ReqFrame->Data_t.WriteSector.Address,
-                             (void*) ReqFrame->Data_t.WriteSector.Data,
-                             ReqFrame->Data_t.WriteSector.FrameDataSize);
+         returnStatus = FLASH_WriteProgramm((void*) ReqFrame->Data_t.WriteSector.Address,
+                                            (void*) ReqFrame->Data_t.WriteSector.Data,
+                                            ReqFrame->Data_t.WriteSector.FrameDataSize);
 
          FLASH_Lock();
-         /*
-          for(j=0; j<8 ;j++)
-          {
-          trace_printf("ROM address  %d  =  %x\n",j , *( (u8*)((ReqFrame -> Data_t.WriteSector.Address) + j)) );
-          }
-          */
 
-         if (counter >= AppSize)
+         if (returnStatus == OK) // if flashing succeeded
          {
-            FLASH_Unlock();
-            FLASH_ErasePage((u32)&Marker);
-            //FLASH_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
-            FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
-            //trace_printf("Marker = %d\n" , Marker );
-            FLASH_Lock();
+            /*
+             for(j=0; j<8 ;j++)
+             {
+             trace_printf("ROM address  %d  =  %x\n",j , *( (u8*)((ReqFrame -> Data_t.WriteSector.Address) + j)) );
+             }
+             */
 
-            //RespFrame -> Result = OK_RESPONSE;
+            if (counter >= AppSize)
+            {
+               FLASH_Unlock();
+               FLASH_ErasePage((u32)&Marker);
+               //FLASH_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
+               FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
+               //trace_printf("Marker = %d\n" , Marker );
+               FLASH_Lock();
 
-            //for(x=0; x < 250000 ;x++);
-            //UART_Send(TxBuffer,sizeof(RespFrame_t));
+               //RespFrame -> Result = OK_RESPONSE;
 
-            counter = 0;
+               //for(x=0; x < 250000 ;x++);
+               //UART_Send(TxBuffer,sizeof(RespFrame_t));
+
+               counter = 0;
+            }
+
+            RespFrame->Result = OK_RESPONSE;
          }
-
-         RespFrame->Result = OK_RESPONSE;
+         else  // if flashing failed
+         {
+            RespFrame->Result = NOK_RESPONSE;
+         }
       }
       else
       {

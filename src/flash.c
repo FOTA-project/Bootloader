@@ -133,9 +133,12 @@ void FLASH_ErasePage(u32 pageAddress)
 //    }
 //}
 
-void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes)
+ERROR_STATUS FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBytes)
 {
+   ERROR_STATUS state = OK;
+
 	u16 idx;
+
 	/* wait for busy flag to be cleared */
 	while((FLASH->SR & FLASH_FLAG_BSY) == FLASH_FLAG_BSY);
 
@@ -159,5 +162,17 @@ void FLASH_WriteProgramm(void* startAddress , void* dataAddress , u16 numberOfBy
 
 	/* RESET PG BIT  */
 	FLASH->CR &= CR_PG_Reset ;
+
+   for(idx=0; idx < numberOfBytes/2 ; idx++)
+   {
+       /* read byte */
+      if ( *((u16*)startAddress + idx) != *((u16*)dataAddress + idx) )
+      {
+         state = NOT_OK;
+         break;
+      }
+   }
+
+   return state;
 }
 
