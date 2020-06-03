@@ -37,8 +37,9 @@
 
 
 /****** Baud Rate &  **************/
-#define UART_FCK            72000000
-#define UART_BUADRATE_9600  9600U
+#define UART_FCK              72000000
+#define UART_BUADRATE_9600    9600U
+#define UART_BUADRATE_115200  115200U
 
 
 #define ON 			1

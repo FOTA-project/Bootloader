@@ -32,9 +32,11 @@
 
 #define UART_CR1_PCE    UART_CR1_PCE_DISABLE
 
-/****** Baud Rate  options -> UART_BUADRATE_9600  **************/
+/****** Baud Rate  options  **************
+***  -> UART_BUADRATE_9600
+***  -> UART_BUADRATE_115200 */
 
-#define UART_BUADRATE  UART_BUADRATE_9600 
+#define UART_BUADRATE  UART_BUADRATE_115200
 
 /****** UART interrupt Number ******/
 
