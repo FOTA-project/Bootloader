@@ -152,7 +152,7 @@ void main (void)
 {
    AppEntryPoint_t MSP = *(void **) START_ADDRESS;
 
-   const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t)  ( (*(u32*)0x08002004) + 0x2000 ) ;//EntryPoint
+   const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t)  ( (*(u32*)0x08002004) /*+ 0x2000*/ ) ;//EntryPoint
    //const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
 
    switch (Marker)
