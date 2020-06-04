@@ -6,9 +6,13 @@
  */
 
 
-#define KEY_ENCRYPTION     0x12345678
-#define OK_RESPONSE			1
-#define NOK_RESPONSE		2
+#define KEY_ENCRYPTION              0x12345678
+#define OK_RESPONSE			        1
+#define NOK_RESPONSE		        2
+
+/* TO check if Application size is suitable or not */
+#define APP_SIZE_NOT_SUITABLE_RESPONSE		3
+
 
 
 typedef enum

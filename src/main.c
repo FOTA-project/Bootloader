@@ -23,6 +23,8 @@
 #define PAGE_SIZE       1024
 #define START_ADDRESS   0x08002000
 
+/* TO check if app size is suitable or not */
+#define MAX_APP_SIZE    (56*1024)
 
 
 typedef void (*AppEntryPoint_t) (void);
@@ -63,10 +65,19 @@ void Comm_Cb(void)
          StartAddress = ReqFrame->Data_t.FlashNewApp.StartAddress;
          AppSize      = ReqFrame->Data_t.FlashNewApp.AppSize;
          EntryPoint   = ReqFrame->Data_t.FlashNewApp.EntryPoint;
-
+          
          KeyValue = KEY_CORRECT;
 
-         RespFrame->Result = OK_RESPONSE;
+         /* TO check if Application size is suitable or not and send response */
+         if(AppSize > MAX_APP_SIZE )
+         {
+            RespFrame->Result = APP_SIZE_NOT_SUITABLE_RESPONSE;
+         }
+         else
+         {
+            RespFrame->Result = OK_RESPONSE;
+         }
+                
       }
       else
       {
