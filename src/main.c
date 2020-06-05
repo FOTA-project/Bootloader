@@ -45,9 +45,13 @@ ReqDateFrame_t *ReqFrame = (ReqDateFrame_t*)RxBuffer;
 static u8 TxBuffer[sizeof(RespFrame_t)];
 RespFrame_t *RespFrame = (RespFrame_t*)TxBuffer;
 
+//u8 failCtr;
+
+
 void Comm_Cb(void)
 {
    //trace_printf("RX cb hello\n");
+   //failCtr++;
 
    static u32 counter;
    u8 returnStatus = OK;
@@ -57,6 +61,7 @@ void Comm_Cb(void)
 
    RespFrame->CMD_No     = ReqFrame->ReqHeader.CMD_No;
    RespFrame->Request_No = ReqFrame->ReqHeader.Request_No;
+   RespFrame->Result     = NOK_RESPONSE;
 
    if (ReqFrame->ReqHeader.CMD_No == Cmd_FlashNewApp)
    {
@@ -82,8 +87,6 @@ void Comm_Cb(void)
       else
       {
          KeyValue = KEY_INCORRECT;
-
-         RespFrame->Result = NOK_RESPONSE;
       }
    }
    else if (ReqFrame->ReqHeader.CMD_No == Cmd_WriteSector)
@@ -143,18 +146,25 @@ void Comm_Cb(void)
          }
          else  // if flashing failed
          {
-            RespFrame->Result = NOK_RESPONSE;
+
          }
       }
       else
       {
-         RespFrame->Result = NOK_RESPONSE;
+
       }
    }
    else
    {
-      RespFrame->Result = NOK_RESPONSE;
+
    }
+
+   /*if (failCtr == 11)
+   {
+      failCtr = 0;
+      RespFrame->Result = NOK_RESPONSE;
+      counter -= ReqFrame->Data_t.WriteSector.FrameDataSize;
+   }*/
 
    //for(x=0; x < 1000000 ;x++);
    UART_Send(TxBuffer, sizeof(RespFrame_t));
@@ -171,8 +181,7 @@ void main (void)
 
    AppEntryPoint_t MSP = *(void**)START_ADDRESS;
 
-   const AppEntryPoint_t App1EntryPoint =
-         (const AppEntryPoint_t) ((*(u32*) 0x08002004) /*+ 0x2000*/); //EntryPoint
+   const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t) ((*(u32*) 0x08002004));  /*+ 0x2000*///EntryPoint
    //const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
 
    switch (Marker)
