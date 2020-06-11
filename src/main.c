@@ -30,7 +30,7 @@
 typedef void (*AppEntryPoint_t) (void);
 
 __attribute__((section(".marker_section"),used))
- volatile u32 Marker; //APP_1_MARKER
+volatile u32 Marker; //APP_1_MARKER
 
 static u32 StartAddress;
 static u32 AppSize;
@@ -50,184 +50,213 @@ RespFrame_t *RespFrame = (RespFrame_t*)TxBuffer;
 
 void Comm_Cb(void)
 {
-   //trace_printf("RX cb hello\n");
-   //failCtr++;
+	//trace_printf("RX cb hello\n");
+	//failCtr++;
 
-   static u32 counter;
-   u8 returnStatus = OK;
-   //u8 j;
-   //u32 x;
-   u32 MARKER_1 = APP_1_MARKER;
+	static u32 counter;
+	u8 returnStatus = OK;
+	//u8 j;
+	//u32 x;
+	u32 MARKER_1 = APP_1_MARKER;
 
-   RespFrame->CMD_No     = ReqFrame->ReqHeader.CMD_No;
-   RespFrame->Request_No = ReqFrame->ReqHeader.Request_No;
-   RespFrame->Result     = NOK_RESPONSE;
+	RespFrame->CMD_No     = ReqFrame->ReqHeader.CMD_No;
+	RespFrame->Request_No = ReqFrame->ReqHeader.Request_No;
+	RespFrame->Result     = NOK_RESPONSE;
 
-   if (ReqFrame->ReqHeader.CMD_No == Cmd_FlashNewApp)
-   {
-      if (ReqFrame->Data_t.FlashNewApp.Key == KEY_ENCRYPTION)
-      {
-         StartAddress = ReqFrame->Data_t.FlashNewApp.StartAddress;
-         AppSize      = ReqFrame->Data_t.FlashNewApp.AppSize;
-         EntryPoint   = ReqFrame->Data_t.FlashNewApp.EntryPoint;
-          
-         KeyValue = KEY_CORRECT;
+	if (ReqFrame->ReqHeader.CMD_No == Cmd_FlashNewApp)
+	{
+		if (ReqFrame->Data_t.FlashNewApp.Key == KEY_ENCRYPTION)
+		{
+			StartAddress = ReqFrame->Data_t.FlashNewApp.StartAddress;
+			AppSize      = ReqFrame->Data_t.FlashNewApp.AppSize;
+			EntryPoint   = ReqFrame->Data_t.FlashNewApp.EntryPoint;
 
-         /* TO check if Application size is suitable or not and send response */
-         if(AppSize > MAX_APP_SIZE )
-         {
-            RespFrame->Result = APP_SIZE_NOT_SUITABLE_RESPONSE;
-         }
-         else
-         {
-            RespFrame->Result = OK_RESPONSE;
-         }
-                
-      }
-      else
-      {
-         KeyValue = KEY_INCORRECT;
-      }
-   }
-   else if (ReqFrame->ReqHeader.CMD_No == Cmd_WriteSector)
-   {
-      if (KeyValue == KEY_CORRECT)
-      {
-         counter += ReqFrame->Data_t.WriteSector.FrameDataSize;
+			KeyValue = KEY_CORRECT;
 
-         FLASH_Unlock();
+			/* TO check if Application size is suitable or not and send response */
+			if(AppSize > MAX_APP_SIZE )
+			{
+				RespFrame->Result = APP_SIZE_NOT_SUITABLE_RESPONSE;
+			}
+			else
+			{
+				RespFrame->Result = OK_RESPONSE;
+			}
 
-         if ((ReqFrame->Data_t.WriteSector.Address / PAGE_SIZE) != CurrentPage)
-         {
-            FLASH_ErasePage(ReqFrame->Data_t.WriteSector.Address);
+		}
+		else
+		{
+			KeyValue = KEY_INCORRECT;
+		}
+	}
+	else if (ReqFrame->ReqHeader.CMD_No == Cmd_WriteSector)
+	{
+		if (KeyValue == KEY_CORRECT)
+		{
+			counter += ReqFrame->Data_t.WriteSector.FrameDataSize;
 
-            CurrentPage = ReqFrame->Data_t.WriteSector.Address / PAGE_SIZE;
-         }
+			FLASH_Unlock();
 
-         //Flash_ProgramWrite ((u32*)&ReqFrame -> Data_t.WriteSector.Data,(u32*)&ReqFrame -> Data_t.WriteSector.Address, ReqFrame -> Data_t.WriteSector.FrameDataSize);
-         // TODO: Verify by BL
+			if ((ReqFrame->Data_t.WriteSector.Address / PAGE_SIZE) != CurrentPage)
+			{
+				FLASH_ErasePage(ReqFrame->Data_t.WriteSector.Address);
 
-         //returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address , (u32) *( &(ReqFrame -> Data_t.WriteSector.Data)) );
-         //returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address +4 , (u32) *(&(ReqFrame -> Data_t.WriteSector.Data) + 4 ) );
+				CurrentPage = ReqFrame->Data_t.WriteSector.Address / PAGE_SIZE;
+			}
 
-         returnStatus = FLASH_WriteProgramm((void*) ReqFrame->Data_t.WriteSector.Address,
-                                            (void*) ReqFrame->Data_t.WriteSector.Data,
-                                            ReqFrame->Data_t.WriteSector.FrameDataSize);
+			//Flash_ProgramWrite ((u32*)&ReqFrame -> Data_t.WriteSector.Data,(u32*)&ReqFrame -> Data_t.WriteSector.Address, ReqFrame -> Data_t.WriteSector.FrameDataSize);
+			// TODO: Verify by BL
 
-         FLASH_Lock();
+			//returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address , (u32) *( &(ReqFrame -> Data_t.WriteSector.Data)) );
+			//returnStatus |= FLASH_WriteWord((u32*)&ReqFrame -> Data_t.WriteSector.Address +4 , (u32) *(&(ReqFrame -> Data_t.WriteSector.Data) + 4 ) );
 
-         if (returnStatus == OK) // if flashing succeeded
-         {
-            /*
+			returnStatus = FLASH_WriteProgramm((void*) ReqFrame->Data_t.WriteSector.Address,
+					(void*) ReqFrame->Data_t.WriteSector.Data,
+					ReqFrame->Data_t.WriteSector.FrameDataSize);
+
+			FLASH_Lock();
+
+			if (returnStatus == OK) // if flashing succeeded
+			{
+				/*
              for(j=0; j<8 ;j++)
              {
              trace_printf("ROM address  %d  =  %x\n",j , *( (u8*)((ReqFrame -> Data_t.WriteSector.Address) + j)) );
              }
-             */
+				 */
 
-            if (counter >= AppSize)
-            {
-               FLASH_Unlock();
-               FLASH_ErasePage((u32)&Marker);
-               //FLASH_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
-               FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
-               //trace_printf("Marker = %d\n" , Marker );
-               FLASH_Lock();
+				if (counter >= AppSize)
+				{
+					FLASH_Unlock();
+					FLASH_ErasePage((u32)&Marker);
+					//FLASH_WriteWord (&Marker , APP_1_MARKER );  //TODO: APP_1_MARKER need to be modified
+					FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
+					//trace_printf("Marker = %d\n" , Marker );
+					FLASH_Lock();
 
-               //RespFrame -> Result = OK_RESPONSE;
+					//RespFrame -> Result = OK_RESPONSE;
 
-               //for(x=0; x < 250000 ;x++);
-               //UART_Send(TxBuffer,sizeof(RespFrame_t));
+					//for(x=0; x < 250000 ;x++);
+					//UART_Send(TxBuffer,sizeof(RespFrame_t));
 
-               counter = 0;
-            }
+					counter = 0;
+				}
 
-            RespFrame->Result = OK_RESPONSE;
-         }
-         else  // if flashing failed
-         {
+				RespFrame->Result = OK_RESPONSE;
+			}
+			else  // if flashing failed
+			{
 
-         }
-      }
-      else
-      {
+			}
+		}
+		else
+		{
 
-      }
-   }
-   else
-   {
+		}
+	}
+	else
+	{
 
-   }
+	}
 
-   /*if (failCtr == 11)
+	/*if (failCtr == 11)
    {
       failCtr = 0;
       RespFrame->Result = NOK_RESPONSE;
       counter -= ReqFrame->Data_t.WriteSector.FrameDataSize;
    }*/
 
-   //for(x=0; x < 1000000 ;x++);
-   UART_Send(TxBuffer, sizeof(RespFrame_t));
+	//for(x=0; x < 1000000 ;x++);
+	UART_Send(TxBuffer, sizeof(RespFrame_t));
 
-   UART_Recieve(RxBuffer, sizeof(ReqDateFrame_t));
+	UART_Recieve(RxBuffer, sizeof(ReqDateFrame_t));
 }
 
 void main (void)
 {
-   StartAddress = 0;
-   AppSize      = 0;
-   EntryPoint   = 0;
-   KeyValue     = KEY_INCORRECT;
+	StartAddress = 0;
+	AppSize      = 0;
+	EntryPoint   = 0;
+	KeyValue     = KEY_INCORRECT;
 
-   AppEntryPoint_t MSP = *(void**)START_ADDRESS;
+	AppEntryPoint_t MSP = *(void**)START_ADDRESS;
 
-   const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t) ((*(u32*) 0x08002004));  /*+ 0x2000*///EntryPoint
-   //const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
+	const AppEntryPoint_t App1EntryPoint = (const AppEntryPoint_t) ((*(u32*) 0x08002004));  /*+ 0x2000*///EntryPoint
+	//const AppEntryPoint_t App2EntryPoint = (const AppEntryPoint_t) ReqFrame -> Data_t.FlashNewApp.EntryPoint;
 
-   switch (Marker)
-   {
-      case APP_1_MARKER:
-         //__set_MSP(*(u32*)StartAddress); // TODO: Init stack pointer of APP1
-         asm volatile ("MSR msp, %0\n" : : "p" (MSP) : );
-         // Switch vector table
-         VTOR = START_ADDRESS;
-         App1EntryPoint ();
-      break;
 
-      case APP_2_MARKER:
-         //   __set_MSP(*(__IO uint32_t*)StartAddress);  // TODO: Init stack pointer of APP2
-         //App2EntryPoint();
-      break;
+	/********************   Boot pin   *****************************/
+	RCC_EnablePrephiralClock(APB2ENR_BUS , PORTB_Enable);
 
-      default:
-         RCC_EnablePrephiralClock(AHBENR_BUS, FLASH_ENABLE);
-         RCC_EnablePrephiralClock(APB2ENR_BUS, PORTA_Enable);
-         RCC_EnablePrephiralClock(APB2ENR_BUS, UART_Enable);
+	GPIO_t  Boot1;
+	Boot1.pin   = PIN2,
+	Boot1.mode  = MODE_INPUT;
+	Boot1.configuration = CONFIG_INPUT_PULL_UP_DOWN;
+	Boot1.port  = PORTB;
 
-         UART_voidInit(USART1);
-         UART_SetRxCbf(Comm_Cb);
-         //UART_SetTxCbf(txcb);
+	GPIO_initPin(&Boot1);
+	GPIO_writePin(&Boot1, 0);
+	u8 Boot1Val;
+	GPIO_readPin(&Boot1, &Boot1Val);
 
-         UART_Recieve(RxBuffer, sizeof(ReqDateFrame_t));
 
-         while(1)
-         {
-            if (Marker != NO_APP_MARKER)
-            {
-               /* fixes a bug where the app marker would be written
-                * and immediately the main() code will reset the microcontroller
-                * which cancel the transmission of the last ACK.
-                * in other words the microcontroller was being reset while the ACK was being sent */
-               while (UART_IsTxBufferEmpty() == busy)
-               {
+	if (Boot1Val == 1 )
+	{
+		u32 MARKER_1 = NO_APP_MARKER;
+		FLASH_Unlock();
+		FLASH_ErasePage((u32)&Marker);
+		FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
+		FLASH_Lock();
 
-               }
+	}
 
-               /* System Reset */
-               NVIC_ResetSystem();
-            }
-         }
-      break;
-   }
+
+
+
+	switch (Marker)
+	{
+	case APP_1_MARKER:
+		//__set_MSP(*(u32*)StartAddress); // TODO: Init stack pointer of APP1
+		asm volatile ("MSR msp, %0\n" : : "p" (MSP) : );
+		// Switch vector table
+		VTOR = START_ADDRESS;
+		App1EntryPoint ();
+		break;
+
+	case APP_2_MARKER:
+		//   __set_MSP(*(__IO uint32_t*)StartAddress);  // TODO: Init stack pointer of APP2
+		//App2EntryPoint();
+		break;
+
+	default:
+		RCC_EnablePrephiralClock(AHBENR_BUS, FLASH_ENABLE);
+		RCC_EnablePrephiralClock(APB2ENR_BUS, PORTA_Enable);
+		RCC_EnablePrephiralClock(APB2ENR_BUS, UART_Enable);
+
+		UART_voidInit(USART1);
+		UART_SetRxCbf(Comm_Cb);
+		//UART_SetTxCbf(txcb);
+
+		UART_Recieve(RxBuffer, sizeof(ReqDateFrame_t));
+
+		while(1)
+		{
+			if (Marker != NO_APP_MARKER)
+			{
+				/* fixes a bug where the app marker would be written
+				 * and immediately the main() code will reset the microcontroller
+				 * which cancel the transmission of the last ACK.
+				 * in other words the microcontroller was being reset while the ACK was being sent */
+				while (UART_IsTxBufferEmpty() == busy)
+				{
+
+				}
+
+				/* System Reset */
+				NVIC_ResetSystem();
+			}
+		}
+		break;
+	}
 }
 
