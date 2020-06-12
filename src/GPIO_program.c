@@ -129,13 +129,13 @@ extern ERROR_STATUS GPIO_writePin(GPIO_t * peri, u32 value)
   Output: ERROR_STATUS
 
  */
-extern ERROR_STATUS GPIO_readPin(GPIO_t * peri, u8 *value)
+extern ERROR_STATUS GPIO_readPin(GPIO_t * peri, u32 *value)
 {
   ERROR_STATUS status = status_Ok;
   
   GPIO * PORT = (GPIO *) peri->port;
   
-  * value = PORT->IDR & peri->pin;
+  *value = PORT->IDR & peri->pin;
     
   return status;
 }

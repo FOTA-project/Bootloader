@@ -191,27 +191,21 @@ void main (void)
 	GPIO_t  Boot1;
 	Boot1.pin   = PIN2,
 	Boot1.mode  = MODE_INPUT;
-	Boot1.configuration = CONFIG_INPUT_PULL_UP_DOWN;
+	Boot1.configuration = CONFIG_INPUT_FLOATING;
 	Boot1.port  = PORTB;
 
 	GPIO_initPin(&Boot1);
-	GPIO_writePin(&Boot1, 0);
-	u8 Boot1Val;
+	u32 Boot1Val;
 	GPIO_readPin(&Boot1, &Boot1Val);
 
-
-	if (Boot1Val == 1 )
+	if (Boot1Val) // if not equal 0 (pin is pressed)
 	{
 		u32 MARKER_1 = NO_APP_MARKER;
 		FLASH_Unlock();
 		FLASH_ErasePage((u32)&Marker);
-		FLASH_WriteProgramm ((void*)&Marker, (void*)&MARKER_1, 4);
+		FLASH_WriteProgramm((void*)&Marker, (void*)&MARKER_1, 4);
 		FLASH_Lock();
-
 	}
-
-
-
 
 	switch (Marker)
 	{

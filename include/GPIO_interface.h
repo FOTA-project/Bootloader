@@ -109,6 +109,6 @@ extern ERROR_STATUS GPIO_initPin(GPIO_t * peri);
 extern ERROR_STATUS GPIO_writePin(GPIO_t * peri, u32 value);
 
 
-extern ERROR_STATUS GPIO_readPin(GPIO_t * peri, u8 *value);
+extern ERROR_STATUS GPIO_readPin(GPIO_t * peri, u32 *value);
 
 #endif
